@@ -33,6 +33,8 @@ This lab simulates a corporate network under active attack during August 2016. T
 
 ## Dashboard
 
+![BOTSv1 SOC Dashboard](screenshots/dashboard.png)
+
 The **BOTSv1 Attack Analysis - SOC Dashboard** provides real-time visibility into the simulated attack campaign with the following panels:
 
 | Panel | Description |
