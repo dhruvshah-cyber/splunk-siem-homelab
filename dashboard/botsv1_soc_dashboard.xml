@@ -1,0 +1,269 @@
+<dashboard version="1.1" theme="dark">
+  <label>BOTSv1 Attack Analysis - SOC Dashboard</label>
+  <description>Security Operations Center dashboard built on real BOTSv1 attack simulation data (Aug 2016). 955,807 events across 22 sourcetypes.</description>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time_tok" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>0</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <title>Total Events</title>
+        <search>
+          <query>index=botsv1 | stats count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="underLabel">Total BOTSv1 Events</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Suricata IDS Alerts</title>
+        <search>
+          <query>index=botsv1 sourcetype=suricata | stats count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="underLabel">IDS Alerts</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Windows Security Events</title>
+        <search>
+          <query>index=botsv1 sourcetype="wineventlog:security" | stats count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="underLabel">Auth and Security Events</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Firewall Blocks</title>
+        <search>
+          <query>index=botsv1 sourcetype=fgt_traffic action=deny | stats count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="underLabel">Blocked Connections</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Sysmon Events</title>
+        <search>
+          <query>index=botsv1 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" | stats count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="underLabel">Windows Sysmon Events</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Attack Events Over Time by Sourcetype</title>
+        <search>
+          <query>index=botsv1 sourcetype IN (suricata, fgt_traffic, fgt_utm, "wineventlog:security", stream:http, iis) | timechart span=1h count by sourcetype limit=6</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="height">300</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top 10 Source IPs (Fortigate Firewall)</title>
+        <search>
+          <query>index=botsv1 sourcetype=fgt_traffic | stats count by srcip | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Suricata Alert Categories</title>
+        <search>
+          <query>index=botsv1 sourcetype=suricata event_type=alert | stats count by alert.category | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Firewall Traffic by Source Country (Top 10)</title>
+        <search>
+          <query>index=botsv1 sourcetype=fgt_traffic srccountry!="Reserved" srccountry!="" | stats count by srccountry | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Process Creation by Account (EventCode 4688)</title>
+        <search>
+          <query>index=botsv1 sourcetype="wineventlog:security" EventCode=4688 Account_Name!="-" | stats count by Account_Name | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">280</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top Suricata IDS Alerts (Signature + Severity)</title>
+        <search>
+          <query>index=botsv1 sourcetype=suricata event_type=alert | stats count by alert.signature, alert.severity, alert.category | sort -count | head 15 | rename alert.signature as Signature, alert.severity as Severity, alert.category as Category, count as "Alert Count"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Top DNS Hostnames Queried (Potential C2)</title>
+        <search>
+          <query>index=botsv1 sourcetype=stream:dns | mvexpand hostname{} | search hostname{}!="" | stats count by hostname{} | sort -count | head 15 | rename "hostname{}" as "DNS Hostname", count as "Query Count"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>IIS HTTP Methods (Web Attack Vector)</title>
+        <search>
+          <query>index=botsv1 sourcetype=iis | stats count by cs_method | sort -count</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>IIS HTTP Status Codes</title>
+        <search>
+          <query>index=botsv1 sourcetype=iis | stats count by sc_status | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Sysmon Events by Host</title>
+        <search>
+          <query>index=botsv1 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" | stats count by host | sort -count | head 10</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top Hosts by Sysmon Activity (Potential Malware Hosts)</title>
+        <search>
+          <query>index=botsv1 sourcetype="xmlwineventlog:microsoft-windows-sysmon/operational" | stats count by host | sort -count | rename host as "Host", count as "Sysmon Events"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Windows Registry Changes by Host (winregistry)</title>
+        <search>
+          <query>index=botsv1 sourcetype=winregistry | stats count by host, key_path, process_image | sort -count | head 15 | rename host as "Host", key_path as "Registry Key Path", process_image as "Process", count as "Changes"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>SMB Lateral Movement Activity</title>
+        <search>
+          <query>index=botsv1 sourcetype="stream:smb" | stats count by src_ip, dest_ip, command | sort -count | head 15 | rename src_ip as "Source IP", dest_ip as "Dest IP", command as "SMB Command", count as "Count"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Privilege Escalation Events (EventCode 4672)</title>
+        <search>
+          <query>index=botsv1 sourcetype="wineventlog:security" EventCode=4672 | stats count by Account_Name, Privileges | sort -count | head 15 | rename Account_Name as "Account", Privileges as "Privilege Assigned", count as "Count"</query>
+          <earliest>$time_tok.earliest$</earliest>
+          <latest>$time_tok.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">heatmap</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
